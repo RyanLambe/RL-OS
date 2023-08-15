@@ -1,186 +1,118 @@
 org 0x7C00
 [bits 16]
 
-KERNEL_LOCATION equ 0x1000
-BootDisk: dd 0
+PML4_ADDRESS equ 0x1000 ; there will only be 1
+PDP_ADDRESS equ 0x2000 ; there will only be 1
+FIRST_PD_ADDRESS equ 0x3000 ; covers the first 1 GB
 
-MemMapBuffer: times 24 db 0 ; create a 24 byte space for data
-MemMapCount: dd 0
+KERNEL_LOCATION equ 0x100000
+
+BootDisk: dd 0
 
 main:
 
-    ; collect data
-    mov [BootDisk], dl ; save current disk number
+    mov [BootDisk], dl
 
-    ; read kernel from disk
-    xor ax, ax
-    mov es, ax
-    mov ds, ax
-    mov bp, 0x8000
-    mov sp, bp
+; *****************************
+; *** Load Kernel to Memory ***
+; *****************************
 
-    mov ebx, KERNEL_LOCATION
-    mov dh, 0x20 ; how much to read
 
-    mov ah, 0x02 ; sector
-    mov al, dh
-    mov ch, 0x00
-    mov dh, 0x00
-    mov cl, 0x02
-    mov dl, [BootDisk]
 
-    int 0x13
 
-    ; enable a20 line
-    ; is it working???
-    ; what does it do???
-    in al, 0x92
-    or al, 2
-    out 0x92, al
+; **********************
+; *** Load Long Mode ***
+; **********************
 
-    ; clear screen
-    mov ah, 0x0
-    mov al, 0x3
-    int 0x10
+    ; put pdp address in pml4
+    mov eax, PDP_ADDRESS
+    or eax, 0x3
+    mov [PML4_ADDRESS], eax
 
-    ; collect memory map
-    xor ebx, ebx
+    ; put the first pd address in pdp
+    mov eax, FIRST_PD_ADDRESS
+    or eax, 0x3
+    mov [PDP_ADDRESS], eax
+
+
+    ; fill in PD with 2mb pages
+    mov ecx, 0 ; counter
     .loop:
-        ; E820 BIOS call 
+
+        mov eax, 0x200000
+        mul ecx
+        or eax, 0x83 ; 
+        mov [FIRST_PD_ADDRESS + ecx * 8], eax
         
-        ; es * 16 + di = MemMapBuffer
-        ; es = MemMapBuffer / 16
-        ; di = MemMapBuffer - (es * 16)
-        mov dx, 0
-        mov ax, MemMapBuffer
-        mov cx, 16
-        div cx
-
-        mov es, ax
-        mov di, dx
-
-        mov eax, 0xE820
-        mov edx, 0x0534D4150
-        mov ecx, 24 ; get all 24 bytes
-
-        int 0x15 ; call
-        
-        ;check for error
-        jc .fail
-        jmp .success
-
-        .fail:
-            mov ah, 0x0e
-            mov al, 'F'
-            int 0x10
-            jmp $
-
-        .success:
-
-        ; pass data to stack
-        mov eax, [MemMapBuffer + 20] ; ACPI
-        push eax
-
-        mov eax, [MemMapBuffer + 16] ; Type
-        push eax
-
-        mov eax, [MemMapBuffer + 12] ; Length High
-        push eax
-
-        mov eax, [MemMapBuffer + 8] ; Length Low
-        push eax
-
-        mov eax, [MemMapBuffer + 4] ; Base High
-        push eax
-
-        mov eax, [MemMapBuffer] ; Base Low
-        push eax
-
-        ; increment count
-        mov eax, [MemMapCount]
-        add eax, 1
-        mov [MemMapCount], eax
-
-        ; end loop
-        cmp ebx, 0
+        inc ecx
+        cmp ecx, 512
         jne .loop
 
-        ; push pointer
-        push esp
+    ; pass pml4 to cpu
+    mov eax, PML4_ADDRESS
+    mov cr3, eax
 
-        ; push count
-        mov eax, [MemMapCount]
-        push eax
-        
-    .loop_end:
+    ; enable PAE
+    mov eax, cr4
+    or eax, 1 << 5
+    mov cr4, eax
 
-    ; enter protected mode
-    jmp LoadProtectedMode
+    ; enable long mode
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, 1 << 8
+    wrmsr
 
-; =======================
-; === Memory Map Data ===
-; =======================
-
-; todo
-
-; ===============================
-; === Global Descriptor Table ===
-; ===============================
-LoadProtectedMode:
-
-    cli
-    lgdt[GDT_Descriptor]
+    ; enable paging & protected mode
     mov eax, cr0
-    or eax, 1
+    or eax, 1 << 31 | 1 << 0
     mov cr0, eax
 
-    jmp CODE_SEG:ProtectedModeStart
 
-GDT_Start:
-    null_descriptor:
-        dd 0
-        dd 0
-    code_descriptor:
-        dw 0xffff
-        dw 0
-        db 0
-        db 0x9A ; 10011010; pres, priv, type, type flags
-        db 0xCF ; 11001111; other flags
-        db 0
-    data_descriptor:
-        dw 0xffff
-        dw 0
-        db 0
-        db 0x92 ; 10010010; pres, priv, type, type flags
-        db 0xCF ; 11001111; other flags
-        db 0
-GDT_End:
-
-GDT_Descriptor:
-    dw GDT_End - GDT_Start - 1
-    dd GDT_Start
-    CODE_SEG equ code_descriptor - GDT_Start
-    DATA_SEG equ data_descriptor - GDT_Start
+    ; jump to long mode
+    lgdt [GDT.Pointer]
+    jmp GDT.Code:LongModeStart
 
 
-; ============================
-; === Entering The Kernel ===
-; ============================
-[bits 32]
-ProtectedModeStart:
 
-    mov ax, DATA_SEG
+; *************************
+; *** Simple GDT Struct ***
+; *************************
+GDT:
+    dq 0
+.Code: equ $ - GDT
+    dq (1 << 43) | (1 << 44) | (1 << 47) | (1 << 53)
+.Pointer:
+    dw $ - GDT - 1
+    dq GDT
+
+
+; ***********************
+; *** Long Mode Start ***
+; ***********************
+[BITS 64]
+[extern kernelMain]
+ 
+LongModeStart:
+    
+    ; clear registers
+    cli
+    mov ax, 0;GDT.Data
     mov ds, ax
-    mov ss, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
+    mov ss, ax
 
-    ; why???
-    ;mov ebp, 0x90000
-    ;mov esp, ebp
+    ; clear to blue screen???
+    mov edi, 0xB8000
+    mov rax, 0x1F201F201F201F20
+    mov ecx, 500
+    rep stosq
 
-    jmp KERNEL_LOCATION
+    mov dword[0xb8000], 0x2f4b2f4f
+
+    jmp $
 
 times 510-($-$$) db 0
 db 0x55, 0xaa
