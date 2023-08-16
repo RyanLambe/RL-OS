@@ -1,23 +1,65 @@
 org 0x7C00
 [bits 16]
 
-PML4_ADDRESS equ 0x1000 ; there will only be 1
-PDP_ADDRESS equ 0x2000 ; there will only be 1
-FIRST_PD_ADDRESS equ 0x3000 ; covers the first 1 GB
+PML4_ADDRESS equ 0x2000 ; there will only be 1
+PDP_ADDRESS equ 0x3000 ; there will only be 1
+FIRST_PD_ADDRESS equ 0x4000 ; covers the first 1 GB
 
-KERNEL_LOCATION equ 0x100000
+STACK_BASE_ADDRESS equ 0x8000
+KERNEL_ADDRESS equ 0x1000 ; note: address hardcoded when loaded
 
 BootDisk: dd 0
 
-main:
+MemMapBuffer: times 24 db 0 ; create a 24 byte space for data
+MemMapCount: dd 0
 
+_start:
+
+    ; save bootdisk number
     mov [BootDisk], dl
+
+    ; clear registers
+    xor ax, ax
+    mov es, ax
+    mov ds, ax
+
+    ; setup stack
+    mov ebp, STACK_BASE_ADDRESS
+    mov esp, ebp
+    
+    ; enable A20 line to access the first 16mb of memory instead of 1mb
+    in al, 0x92
+    or al, 2
+    out 0x92, al
+
+    ; clear screen
+    mov ah, 0x0
+    mov al, 0x3
+    int 0x10
+
 
 ; *****************************
 ; *** Load Kernel to Memory ***
 ; *****************************
 
+    mov bx, KERNEL_ADDRESS
+    mov dh, 0x20 ; how much to read
 
+    mov ah, 0x02
+    mov al, dh
+    mov ch, 0x00
+    mov dh, 0x00
+    mov cl, 0x02
+    mov dl, [BootDisk]
+
+    int 0x13
+
+
+; **************************
+; *** Collect Memory Map ***
+; **************************
+
+    ; put in specific location(rather then the stack)
 
 
 ; **********************
@@ -37,7 +79,7 @@ main:
 
     ; fill in PD with 2mb pages
     mov ecx, 0 ; counter
-    .loop:
+    .FillPD:
 
         mov eax, 0x200000
         mul ecx
@@ -46,7 +88,7 @@ main:
         
         inc ecx
         cmp ecx, 512
-        jne .loop
+        jne .FillPD
 
     ; pass pml4 to cpu
     mov eax, PML4_ADDRESS
@@ -68,20 +110,32 @@ main:
     or eax, 1 << 31 | 1 << 0
     mov cr0, eax
 
-
     ; jump to long mode
     lgdt [GDT.Pointer]
     jmp GDT.Code:LongModeStart
 
 
-
-; *************************
-; *** Simple GDT Struct ***
-; *************************
+; *******************************
+; *** Global Descriptor Table ***
+; *******************************
 GDT:
+.Null:
     dq 0
 .Code: equ $ - GDT
-    dq (1 << 43) | (1 << 44) | (1 << 47) | (1 << 53)
+    dd 0xFFFF
+    db 0
+    db 0x9A ; 10011010
+    db 0xAF ; 10101111
+    db 0
+.Data: equ $ - GDT
+    dd 0xFFFF
+    db 0
+    db 0x92 ; 10010010
+    db 0xCF ; 11001111
+    db 0
+.TSS: equ $ - GDT
+    dd 0x00000068
+    dd 0x00CF8900
 .Pointer:
     dw $ - GDT - 1
     dq GDT
@@ -91,13 +145,12 @@ GDT:
 ; *** Long Mode Start ***
 ; ***********************
 [BITS 64]
-[extern kernelMain]
  
 LongModeStart:
     
     ; clear registers
     cli
-    mov ax, 0;GDT.Data
+    mov ax, GDT.Data
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -110,8 +163,7 @@ LongModeStart:
     mov ecx, 500
     rep stosq
 
-    mov dword[0xb8000], 0x2f4b2f4f
-
+    jmp KERNEL_ADDRESS ; todo move Kernel to better address
     jmp $
 
 times 510-($-$$) db 0

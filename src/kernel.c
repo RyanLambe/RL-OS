@@ -17,61 +17,10 @@ typedef struct {
 } MemoryMapEntry;
 
 
-void start(unsigned int count, MemoryMapEntry* val){
-
-    char buffer[1024];
+void start(){
 
     print("Hello :)\n\n");
-
-    print("count: ");
-    intToCharArray(count, buffer);
-    print(buffer);
-    print("\n");
-
-    print("stack bottom: ");
-    intToHexCharArray((int)&val[count], buffer);
-    print(buffer);
-    print("\n");
-
-    print("stack top: ");
-    intToHexCharArray((int)val, buffer);
-    print(buffer);
-    print("\n");
-    
-
-    unsigned int totalSpace = 0;
-    unsigned int usableSpace = 0;
-
-    for(int i = 0; i < count; i++){
-        print("base: ");
-        intToHexCharArray(val[i].BaseLow, buffer);
-        print(buffer);
-
-        print(", length: ");
-        intToCharArray(val[i].LengthLow, buffer);
-        print(buffer);
-
-        print(", type: ");
-        intToCharArray(val[i].Type, buffer);
-        print(buffer);
-
-        print("\n");
-
-        totalSpace += val[i].LengthLow;
-        if(val[i].Type == 1){
-            usableSpace += val[i].LengthLow;
-        }
-    }
-
-    print("\ntotal space(kb): ");
-    intToCharArray((totalSpace / 1024), buffer);
-    print(buffer);
-
-    print("\nusable space(kb): ");
-    intToCharArray((usableSpace / 1024), buffer);
-    print(buffer);
-
-    return;
+    print("This is the kernel");
 }
 
 

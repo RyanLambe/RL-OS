@@ -11,13 +11,13 @@ mkdir -p temp/iso
 nasm src/boot.asm -f bin -o temp/bin/boot.bin
 
 # kernel - asm
-nasm src/kernelEntry.asm -f elf32 -o temp/obj/kernelEntry.o
+nasm src/kernelEntry.asm -f elf64 -o temp/obj/kernelEntry.o
 
 # kernel - c
-clang src/kernel.c -o temp/obj/kernel.o -c -target i386-elf
+clang src/kernel.c -o temp/obj/kernel.o -c -target x86_64-i386-elf
 
 # kernel - link
-ld.lld -o temp/bin/kernel.bin -Ttext 0x1000 temp/obj/kernelEntry.o temp/obj/kernel.o --oformat binary -m elf_i386
+ld.lld -o temp/bin/kernel.bin -Ttext 0x1000 temp/obj/kernelEntry.o temp/obj/kernel.o --oformat binary
 
 
 # combine project into img file
