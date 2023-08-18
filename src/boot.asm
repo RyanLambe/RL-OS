@@ -1,17 +1,22 @@
 org 0x7C00
 [bits 16]
 
-PML4_ADDRESS equ 0x2000 ; there will only be 1
-PDP_ADDRESS equ 0x3000 ; there will only be 1
-FIRST_PD_ADDRESS equ 0x4000 ; covers the first 1 GB
+; paging addresses
+PML4_ADDRESS equ 0x1000 ; there will only be 1
+PDP_ADDRESS equ 0x2000 ; there will only be 1
+FIRST_PD_ADDRESS equ 0x3000 ; covers the first 1 GB
 
-STACK_BASE_ADDRESS equ 0x8000
-KERNEL_ADDRESS equ 0x1000 ; note: address hardcoded when loaded
+; idt addresses
+IDT_ADDRESS equ 0x4000
+
+; memory map addresses
+MEMMAP_ADDRESS equ 0x7000
+
+; kernel addresses
+STACK_BASE_ADDRESS equ 0x9FBFF ; highest memory in kernel
+KERNEL_ADDRESS equ 0x7E00
 
 BootDisk: dd 0
-
-MemMapBuffer: times 24 db 0 ; create a 24 byte space for data
-MemMapCount: dd 0
 
 _start:
 
@@ -42,24 +47,32 @@ _start:
 ; *** Load Kernel to Memory ***
 ; *****************************
 
+    mov ah, 0x02 ; command
     mov bx, KERNEL_ADDRESS
-    mov dh, 0x20 ; how much to read
-
-    mov ah, 0x02
-    mov al, dh
-    mov ch, 0x00
-    mov dh, 0x00
-    mov cl, 0x02
+    mov al, 0x20 ; amount to read
+    mov ch, 0x00 ; cylinder
+    mov dh, 0x00 ; head
+    mov cl, 0x02 ; sector
     mov dl, [BootDisk]
 
     int 0x13
+
+    mov bl, 'K'
+    jc Error
 
 
 ; **************************
 ; *** Collect Memory Map ***
 ; **************************
 
-    ; put in specific location(rather then the stack)
+    ; todo
+
+
+; *****************
+; *** Setup IDT ***
+; *****************
+
+    ; todo
 
 
 ; **********************
@@ -133,12 +146,35 @@ GDT:
     db 0x92 ; 10010010
     db 0xCF ; 11001111
     db 0
-.TSS: equ $ - GDT
-    dd 0x00000068
-    dd 0x00CF8900
 .Pointer:
     dw $ - GDT - 1
     dq GDT
+
+
+; **********************
+; *** Error Handling ***
+; **********************
+
+; param: bl = error code(ASCII)
+Error:
+    mov ah, 0x0e
+    
+    mov al, 'E'
+    int 0x10
+
+    mov al, 'R'
+    int 0x10
+
+    mov al, 'R'
+    int 0x10
+
+    mov al, ':'
+    int 0x10
+
+    mov al, bl
+    int 0x10
+
+    jmp $
 
 
 ; ***********************
@@ -157,13 +193,14 @@ LongModeStart:
     mov gs, ax
     mov ss, ax
 
-    ; clear to blue screen???
+    ; clear to blue screen
     mov edi, 0xB8000
     mov rax, 0x1F201F201F201F20
     mov ecx, 500
     rep stosq
 
-    jmp KERNEL_ADDRESS ; todo move Kernel to better address
+    ; jump to kernel
+    jmp KERNEL_ADDRESS
     jmp $
 
 times 510-($-$$) db 0

@@ -1,0 +1,73 @@
+
+
+******************
+*** Memory Map ***
+******************
+
+Reserved:                   0x00000 - 0x004FF
+Unused(2.75kb):             0x00500 - 0x00FFF
+Paging Directories(12kb):   0x01000 - 0x03FFF
+Interupt Table(8kb):        0x04000 - 0x05FFF
+Unused(4kb):                0x06000 - 0x06FFF
+MemoryMap(3kb)              0x07000 - 0x07BFF
+Bootloader(0.5kb):          0x07C00 - 0x07DFF
+Kernel(~600kb): 	        0x07E00 - 0x9FBFF <--- verify max
+Reserved:		            0x9FC00 - 0x100000
+
+
+
+********************
+*** Paging Notes ***
+********************
+
+2mb Pages
+
+Other page directories will be stored from 0x1000 to 0x2FFF
+Other page directories = PDP + PML4 = 8kb
+
+Each PD will cover the next GB
+The first PD will be stored at 0x3000
+Other PDs will be stored at the begining of the next GB
+
+PML4: 1 instance, 1 entry
+PML4 = 1 instance * 512 entries * 8 bytes = *4096 bytes*
+
+PDP: 1 instance
+PDP = 1 instance * 512 entries * 8 bytes = *4096 bytes*
+
+PD: 512 instances(max)
+PD = 512 instances * 512 entries * 8 bytes = *2,097,152 bytes(2mb)*
+PD's need to be created per process
+
+
+
+**********************
+*** Interupt Notes ***
+**********************
+
+512 entries * 16 bytes/entry = *3072 bytes*
+
+
+
+************************
+*** Memory Map Notes ***
+************************
+
+Max 128 entries using 0xE820
+128 entries * 24 bytes/entry = *8192 bytes*
+
+There is no counter therefore after reading
+To mark the end of the list the following entry's type will be 0xFFFFFFFF
+unless all 128 entries are filled, then it is unnecessary
+
+
+
+********************
+*** Kernel Notes ***
+********************
+
+Kernel takes largest continuous space within the first mb
+The Kernel starts after the bootloader and ends at the first reserved memory
+
+x86 stacks move from High to Low memory
+therefore the stack will be stored at 0x9FBFF

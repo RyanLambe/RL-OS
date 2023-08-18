@@ -17,8 +17,7 @@ nasm src/kernelEntry.asm -f elf64 -o temp/obj/kernelEntry.o
 clang src/kernel.c -o temp/obj/kernel.o -c -target x86_64-i386-elf
 
 # kernel - link
-ld.lld -o temp/bin/kernel.bin -Ttext 0x1000 temp/obj/kernelEntry.o temp/obj/kernel.o --oformat binary
-
+ld.lld -o temp/bin/kernel.bin -Ttext 0x7E00 temp/obj/kernelEntry.o temp/obj/kernel.o --oformat binary
 
 # combine project into img file
 dd if=/dev/zero of=final.img bs=1024 count=1440
