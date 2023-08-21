@@ -7,10 +7,10 @@ char* TextBuffer = (char*)0xb8000;
 
 typedef struct {
  
-	unsigned int BaseLow;
-	unsigned int BaseHigh;
-	unsigned int LengthLow;
-	unsigned int LengthHigh;
+	unsigned long long Base;
+	unsigned long long Length;
+	//unsigned int LengthLow;
+	//unsigned int LengthHigh;
 	unsigned int Type;
 	unsigned int ACPI;
  
@@ -19,8 +19,14 @@ typedef struct {
 
 void start(){
 
+    char buffer[1024];
+    MemoryMapEntry* memMap = (MemoryMapEntry*)0x7000;
+
     print("Hello :)\n\n");
-    print("This is the kernel");
+
+    intToHexCharArray(memMap[0].Length, &buffer);
+    print("Length: ");
+    print(buffer);
 }
 
 

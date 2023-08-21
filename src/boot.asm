@@ -61,18 +61,58 @@ _start:
     jc Error
 
 
-; **************************
-; *** Collect Memory Map ***
-; **************************
-
-    ; todo
-
-
 ; *****************
 ; *** Setup IDT ***
 ; *****************
 
     ; todo
+
+
+; **************************
+; *** Collect Memory Map ***
+; **************************
+    
+    mov ecx, MEMMAP_ADDRESS ; next address
+    xor ebx, ebx
+    mov es, ebx
+    .getNextMemMap:
+
+        ; E820 bios call 
+
+        mov di, cx ; address
+        push ecx
+
+        mov eax, 0xE820 ; command
+        mov ecx, 24 ; get all 24 bytes
+        mov edx, 0x0534D4150
+        int 0x15
+
+        pop ecx
+
+        ; check for error
+        push ebx
+        mov bl, 'M'
+        jc Error
+        pop ebx
+
+        ; loop
+        add ecx, 24
+        cmp ebx, 0
+        jne .getNextMemMap
+        
+    ; if ecx < 128 enteries
+    cmp ecx, 0x7C00
+    je .skipMemMapEnd
+
+    ; skip 8 byte base and 8 byte length
+    add ecx, 16 
+
+    ; fill type field with 0xFFFFFFFF to mark end
+    mov eax, 0xFFFFFFFF
+    mov [ecx], eax
+
+    .skipMemMapEnd:
+
 
 
 ; **********************
