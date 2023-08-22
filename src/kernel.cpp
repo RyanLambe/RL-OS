@@ -1,37 +1,28 @@
-void print(char* string);
-void intToCharArray(int number, char *result);
-void intToHexCharArray(int number, char *result);
+void print(const char* string);
+void intToCharArray(int number, char* result);
+void intToHexCharArray(int number, char* result);
 
 char* TextBuffer = (char*)0xb8000;
 
-
-typedef struct {
- 
-	unsigned long long Base;
-	unsigned long long Length;
-	//unsigned int LengthLow;
-	//unsigned int LengthHigh;
+struct MemoryMapEntry {
+	unsigned long Base;
+	unsigned long Length;
 	unsigned int Type;
 	unsigned int ACPI;
- 
-} MemoryMapEntry;
+};
 
-
-void start(){
-
+extern "C" void start(){
     char buffer[1024];
     MemoryMapEntry* memMap = (MemoryMapEntry*)0x7000;
 
     print("Hello :)\n\n");
 
-    intToHexCharArray(memMap[0].Length, &buffer);
+    intToHexCharArray(memMap[0].Length, buffer);
     print("Length: ");
     print(buffer);
 }
 
-
-
-void print(char* string){
+void print(const char* string){
 
     for(int i = 0; string[i] != '\0'; i++){
 
@@ -40,7 +31,7 @@ void print(char* string){
         case '\n':
             //TextBuffer += 160;
             TextBuffer -= 0xb8000;
-            TextBuffer += 160 - ((int)TextBuffer % 160);
+            TextBuffer += 160 - ((long)TextBuffer % 160);
             TextBuffer += 0xb8000;
             break;
         

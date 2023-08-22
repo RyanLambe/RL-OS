@@ -61,13 +61,6 @@ _start:
     jc Error
 
 
-; *****************
-; *** Setup IDT ***
-; *****************
-
-    ; todo
-
-
 ; **************************
 ; *** Collect Memory Map ***
 ; **************************
@@ -162,10 +155,23 @@ _start:
     mov eax, cr0
     or eax, 1 << 31 | 1 << 0
     mov cr0, eax
+    
+    ; setup idt
+    lidt [IDTR]
 
     ; jump to long mode
     lgdt [GDT.Pointer]
     jmp GDT.Code:LongModeStart
+
+
+; *******************
+; *** IDT Pointer ***
+; *******************
+IDTR:
+.Length: 
+    dw (16 * 256) - 1
+.Base:
+    dq IDT_ADDRESS
 
 
 ; *******************************

@@ -14,7 +14,7 @@ nasm src/boot.asm -f bin -o temp/bin/boot.bin
 nasm src/kernelEntry.asm -f elf64 -o temp/obj/kernelEntry.o
 
 # kernel - c
-clang src/kernel.c -o temp/obj/kernel.o -c -target x86_64-i386-elf
+clang++ src/kernel.cpp -o temp/obj/kernel.o -c -target x86_64-i386-elf
 
 # kernel - link
 ld.lld -o temp/bin/kernel.bin -Ttext 0x7E00 temp/obj/kernelEntry.o temp/obj/kernel.o --oformat binary
