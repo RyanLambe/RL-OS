@@ -1,17 +1,21 @@
 #! /bin/bash
 
+clear
+
 # create paths
 mkdir -p build
 mkdir -p temp
 mkdir -p temp/bin
-mkdir -p temp/obj
 mkdir -p temp/iso
+mkdir -p temp/obj
+mkdir -p temp/obj/kernel
 
 # bootloader
 nasm boot/boot.asm -f bin -o temp/bin/boot.bin
 
 # kernel - asm
 nasm boot/kernelEntry.asm -f elf64 -o temp/obj/kernelEntry.o
+nasm kernel/src/*.asm -f elf64 -o int.o
 
 # kernel - c++
 clang++ kernel/src/*.cpp -c -target x86_64-i386-elf

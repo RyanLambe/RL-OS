@@ -179,19 +179,39 @@ IDTR:
 ; *******************************
 GDT:
 .Null:
-    dq 0
+    dq 0, 0
 .Code: equ $ - GDT
-    dd 0xFFFF
+    dw 0xFFFF
+    dw 0x0000
     db 0
-    db 0x9A ; 10011010
-    db 0xAF ; 10101111
+    db 0x9A ; access
+    db 0xAF ; flags + limit
     db 0
+    dq 0
 .Data: equ $ - GDT
-    dd 0xFFFF
+    dw 0xFFFF
+    dw 0x0000
     db 0
-    db 0x92 ; 10010010
-    db 0xCF ; 11001111
+    db 0x92 ; access
+    db 0xAF ; flags + limit
     db 0
+    dq 0
+.UserCode: equ $ - GDT
+    dw 0xFFFF
+    dw 0x0000
+    db 0
+    db 0xFA ; access
+    db 0xAF ; flags + limit
+    db 0
+    dq 0
+.UserData: equ $ - GDT
+    dw 0xFFFF
+    dw 0x0000
+    db 0
+    db 0xF2 ; access
+    db 0xAF ; flags + limit
+    db 0
+    dq 0
 .Pointer:
     dw $ - GDT - 1
     dq GDT
