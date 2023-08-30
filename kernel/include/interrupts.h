@@ -1,41 +1,37 @@
 #pragma once
 
 struct __attribute__((packed)) IDTEntry {
-    unsigned short offset_1;
+
+    unsigned short pointerLow;
     unsigned short selector;
     unsigned char  ist;
-    unsigned char  type_attributes;
-    unsigned short offset_2;
-    unsigned int offset_3;
+    unsigned char  flags;
+    unsigned short pointerMid;
+    unsigned int pointerHigh;
     unsigned int zero = 0;
-};
-
-struct __attribute__((packed)) IDTPointer{
-    unsigned short limit;
-    unsigned long base;
 };
 
 enum GDTSegment{
     Code = 0x10,
     Data = 0x20,
     UserCode = 0x30,
-    UserData = 0x40
+    UserData = 0x40,
 };
 
 enum PrivilegeLevel{
-    Kernel = 0x00,
-    User = 0x03
+    Kernel = 0b00,
+    User = 0b11,
 };
 
-struct registers
+struct Registers
 {
-    unsigned int ds;                  // Data segment selector
-    unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
-    unsigned int int_no, err_code;    // Interrupt number and error code (if applicable)
-    unsigned int eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
+    unsigned long ds;                  // Data segment selector
+    //unsigned long rdi, rsi, rbp, rsp, rbx, rdx, rcx, rax; // registers
+    unsigned long interrupt, errorCode;    // Interrupt number and error code
+    unsigned long eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
 };
 
-void setupIDT();
+void SetupIDT();
 
 // is there a better way :(
 extern "C" void isr0 ();

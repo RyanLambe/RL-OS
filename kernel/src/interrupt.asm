@@ -1,21 +1,22 @@
+[bits 64]
+[extern ISRHandler]
 
 
 %macro ISR_NOERRCODE 1  ; define a macro, taking one parameter
-  [GLOBAL isr%1]        ; %1 accesses the first parameter.
+  global isr%1        ; %1 accesses the first parameter.
   isr%1:
-    cli
-    push byte 0
-    push byte %1
-    jmp isr_common_stub
+    push 0
+    push %1
+    jmp ISRGeneral
 %endmacro
 
 %macro ISR_ERRCODE 1
-  [GLOBAL isr%1]
+  global isr%1
   isr%1:
-    cli
-    push byte %1
-    jmp isr_common_stub
+    push %1
+    jmp ISRGeneral
 %endmacro
+
 
 ISR_NOERRCODE 0
 ISR_NOERRCODE 1
@@ -25,13 +26,13 @@ ISR_NOERRCODE 4
 ISR_NOERRCODE 5
 ISR_NOERRCODE 6
 ISR_NOERRCODE 7
-ISR_NOERRCODE 8
+ISR_ERRCODE 8
 ISR_NOERRCODE 9
-ISR_NOERRCODE 10
-ISR_NOERRCODE 11
-ISR_NOERRCODE 12
-ISR_NOERRCODE 13
-ISR_NOERRCODE 14
+ISR_ERRCODE 10
+ISR_ERRCODE 11
+ISR_ERRCODE 12
+ISR_ERRCODE 13
+ISR_ERRCODE 14
 ISR_NOERRCODE 15
 ISR_NOERRCODE 16
 ISR_NOERRCODE 17
@@ -50,52 +51,30 @@ ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
 
-[global idt_flush]
-idt_flush:
-    mov eax, [esp+8]
-    lidt [eax]
-    ret
 
-[extern isr_handler]
-isr_common_stub:
-   push rdi                    ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
-   push rsi
-   push rbp
-   push rsp
-   push rbx
-   push rdx
-   push rcx
-   push rax
+ISRGeneral:
 
-   mov ax, ds               ; Lower 16-bits of eax = ds.
-   push rax                 ; save the data segment descriptor
+    ; save original segment
+    mov ax, ds
+    push rax
 
-   mov ax, 0x10  ; load the kernel data segment descriptor
-   mov ds, ax
-   mov es, ax
-   mov fs, ax
-   mov gs, ax
+    ; load the kernel data segment descriptor
+    mov ax, 0x20
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
-   jmp $
+    ; call isr handler
+    call ISRHandler
 
-   call isr_handler
+    ; reload the original segment
+    pop rax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
-   pop rax        ; reload the original data segment descriptor
-   mov ds, ax
-   mov es, ax
-   mov fs, ax
-   mov gs, ax
-
-
-   push rax ; Pops edi,esi,ebp,esp,ebx,edx,ecx,eax
-   push rcx
-   push rdx
-   push rbx
-   push rsp
-   push rbp
-   push rsi
-   push rdi
-
-   add esp, 8     ; Cleans up the pushed error code and pushed ISR number
-   sti
-   iret           ; pops 5 things at once: CS, EIP, EFLAGS, SS, and ESP
+    ; return
+    add rsp, 16
+    iretq

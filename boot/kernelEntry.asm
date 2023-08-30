@@ -2,4 +2,5 @@
 [extern CStart]
 
 call CStart
+hlt
 jmp $

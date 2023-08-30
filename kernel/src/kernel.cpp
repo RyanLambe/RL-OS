@@ -9,20 +9,16 @@ struct __attribute__((packed)) MemoryMapEntry {
 };
 
 void KernelStart(){
-    char buffer[1024];
     MemoryMapEntry* memMap = (MemoryMapEntry*)0x7000;
+    SetupIDT();
 
-    print("Hello :)\n\n");
-
-    intToHexCharArray(memMap[0].Length, buffer);
-    print("Length: ");
-    print(buffer);
-    print("\n");
-
-    // interrupt stuff
-    setupIDT();
+    print("Welcome to RL-OS!\n\n");
+    char buffer[1024];
 
     asm volatile ("int $0x3");
+    asm volatile ("int $0x4");
+
+    print("test");
 }
 
 extern "C" void CStart(){

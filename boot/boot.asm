@@ -18,7 +18,7 @@ KERNEL_ADDRESS equ 0x7E00
 
 BootDisk: dd 0
 
-_start:
+start:
 
     ; save bootdisk number
     mov [BootDisk], dl
