@@ -1,9 +1,14 @@
 #include "../include/interrupts.h"
+#include "../include/types.h"
 #include "../include/console.h"
+#include "../include/cpu.h"
+#include "../include/Time.h"
 
 IDTEntry* idt = (IDTEntry*)0x4000;
 
-void SetInterrupt(int index, unsigned long long pointer, GDTSegment segment, unsigned char ist, bool trapGate, PrivilegeLevel privilege);
+void SetInterrupt(int index, unsigned long pointer, GDTSegment segment, unsigned char ist, bool trapGate, PrivilegeLevel privilege);
+void SetupISRs();
+void SetupIRQs();
 
 void SetupIDT(){
 
@@ -12,7 +17,11 @@ void SetupIDT(){
     for(int i = 0; i < sizeof(IDTEntry) / sizeof(long) * 256; i++)
         toClear[i] = 0;
 
-    // ISRs
+    SetupIRQs();
+    SetupISRs();
+}
+
+void SetupISRs(){
     // no IST = 0x00
     SetInterrupt(0, (unsigned long)isr0, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
     SetInterrupt(1, (unsigned long)isr1, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
@@ -46,10 +55,42 @@ void SetupIDT(){
     SetInterrupt(29, (unsigned long)isr29, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
     SetInterrupt(30, (unsigned long)isr30, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
     SetInterrupt(31, (unsigned long)isr31, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+}
+
+void SetupIRQs(){
+
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+    outb(0x21, 0x0);
+    outb(0xA1, 0x0);
+
+    // no IST = 0x00
+    SetInterrupt(32, (unsigned long)irq0, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(33, (unsigned long)irq1, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(34, (unsigned long)irq2, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(35, (unsigned long)irq3, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(36, (unsigned long)irq4, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(37, (unsigned long)irq5, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(38, (unsigned long)irq6, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(39, (unsigned long)irq7, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(40, (unsigned long)irq8, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(41, (unsigned long)irq9, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(42, (unsigned long)irq10, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(43, (unsigned long)irq11, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(44, (unsigned long)irq12, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(45, (unsigned long)irq13, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(46, (unsigned long)irq14, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
+    SetInterrupt(47, (unsigned long)irq15, GDTSegment::Code, 0x00, false, PrivilegeLevel::Kernel);
 
 }
 
-void SetInterrupt(int index, unsigned long long pointer, GDTSegment segment, unsigned char ist, bool trapGate, PrivilegeLevel privilege){
+void SetInterrupt(int index, unsigned long pointer, GDTSegment segment, unsigned char ist, bool trapGate, PrivilegeLevel privilege){
     // split offset
     idt[index].pointerLow = pointer & 0xFFFF;
     idt[index].pointerMid = (pointer >> 16) & 0xFFFF;
@@ -73,7 +114,7 @@ void SetInterrupt(int index, unsigned long long pointer, GDTSegment segment, uns
     idt[index].zero = 0;
 }
 
-// This gets called from our ASM interrupt handler stub.
+// called from asm
 extern "C" void ISRHandler(Registers registers)
 {
     char buffer[1024];
@@ -94,7 +135,47 @@ extern "C" void ISRHandler(Registers registers)
 
         print(" - Error code: ");
         print(buffer);
+
+        break;
     }
 
     print("\n");
+}
+
+// todo: create standard library and move this to it
+extern "C" void memcpy(void *dest, const void *src, unsigned int n)
+{
+    for (unsigned int i = 0; i < n; i++)
+    {
+        ((char*)dest)[i] = ((char*)src)[i];
+    }
+}
+
+// called from asm
+extern "C" void IRQHandler(Registers registers)
+{
+    // send received message to pic
+    if (registers.interrupt >= 40)
+    {
+        outb(0xA0, 0x20);
+    }
+    outb(0x20, 0x20);
+
+    // handle interrupt
+    switch (registers.interrupt) {
+        // pit
+        case 32:
+            Time::tick(&registers);
+            break;
+
+        // todo: keyboard
+        case 33:
+            print("Keyboard");
+            break;
+
+        // todo: mouse
+        case 44:
+            print("Mouse");
+            break;
+    }
 }

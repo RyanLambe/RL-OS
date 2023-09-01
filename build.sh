@@ -2,6 +2,9 @@
 
 clear
 
+rm -r temp
+rm -r build
+
 # create paths
 mkdir -p build
 mkdir -p temp
@@ -15,7 +18,7 @@ nasm boot/boot.asm -f bin -o temp/bin/boot.bin
 
 # kernel - asm
 nasm boot/kernelEntry.asm -f elf64 -o temp/obj/kernelEntry.o
-nasm kernel/src/*.asm -f elf64 -o int.o
+nasm kernel/src/interrupts.asm -f elf64 -o interrupts.asm.o
 
 # kernel - c++
 clang++ kernel/src/*.cpp -c -target x86_64-i386-elf

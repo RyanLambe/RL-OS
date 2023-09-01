@@ -1,5 +1,6 @@
 #include "../include/console.h"
 #include "../include/interrupts.h"
+#include "../include/Time.h"
 
 struct __attribute__((packed)) MemoryMapEntry {
 	unsigned long Base;
@@ -10,15 +11,13 @@ struct __attribute__((packed)) MemoryMapEntry {
 
 void KernelStart(){
     MemoryMapEntry* memMap = (MemoryMapEntry*)0x7000;
+
     SetupIDT();
 
     print("Welcome to RL-OS!\n\n");
-    char buffer[1024];
+    print("20Hz: ");
 
-    asm volatile ("int $0x3");
-    asm volatile ("int $0x4");
-
-    print("test");
+    Time::SetupTime(20);
 }
 
 extern "C" void CStart(){

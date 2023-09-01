@@ -251,7 +251,6 @@ Error:
 LongModeStart:
     
     ; clear registers
-    cli
     mov ax, GDT.Data
     mov ds, ax
     mov es, ax
