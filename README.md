@@ -1,4 +1,4 @@
-### ** This Project is NOT COMPLETE; it was used to learn about Operating Systems and their development **
+### This Project is NOT COMPLETE; it was used to learn about Operating Systems and their development
 
 # RL OS
 RL OS is a project to create an x86-64 Operating system from the ground up, using my own bootloader and kernel.
